@@ -17,7 +17,7 @@
 @property (nonatomic, strong)   NSMapTable                      *mapDelegate;
 
 @property (nonatomic, strong)   dispatch_queue_t                ioQueue;
-@property (nonatomic, strong)   NSManagedObjectContext          *queueContext;
+@property (nonatomic, strong)   NSManagedObjectContext          *ioContext;
 
 @end
 
@@ -36,14 +36,14 @@
         NSString *string = [NSString stringWithFormat:@"com.Golf.%@.queue", NSStringFromClass([self class])];
         self.ioQueue = dispatch_queue_create(string.UTF8String, DISPATCH_QUEUE_SERIAL);
         dispatch_sync(self.ioQueue, ^{
-            self.queueContext = [[NSManagedObjectContext alloc] initWithConcurrencyType:NSPrivateQueueConcurrencyType];
-            self.queueContext.persistentStoreCoordinator = self.persistentStoreCoordinator;
+            self.ioContext = [[NSManagedObjectContext alloc] initWithConcurrencyType:NSPrivateQueueConcurrencyType];
+            self.ioContext.persistentStoreCoordinator = self.persistentStoreCoordinator;
         });
         
         [[NSNotificationCenter defaultCenter] addObserver:self
                                                  selector:@selector(editDidSave:)
                                                      name:NSManagedObjectContextDidSaveNotification
-                                                   object:self.queueContext];
+                                                   object:self.ioContext];
     }
     
     return self;
@@ -214,7 +214,7 @@
      syncPredicate:(NSPredicate *)predicate {
     NSArray *objects = array.copy;
     dispatch_async(self.ioQueue, ^{
-        NSManagedObjectContext *managedObjectContext = self.queueContext;
+        NSManagedObjectContext *managedObjectContext = self.ioContext;
         
         BOOL syncFlag = NO;
         NSEntityDescription *desc = [NSEntityDescription entityForName:entityName inManagedObjectContext:managedObjectContext];
@@ -272,7 +272,7 @@
 
 - (void)deleteObjects:(NSArray *)array {
     dispatch_async(self.ioQueue, ^{
-        NSManagedObjectContext *managedObjectContext = self.queueContext;
+        NSManagedObjectContext *managedObjectContext = self.ioContext;
         
         for (id data in array) {
             [self onDeleteObject:data managedObjectContext:managedObjectContext];
